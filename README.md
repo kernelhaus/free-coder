@@ -1,5 +1,7 @@
 # free-coder
 
+**Using it? Read [GUIDE.md](GUIDE.md)** (setup, adding free providers, daily use, fixing problems).
+
 A coding assistant for a non-programmer technician (PLC code, R, data to reports), running on free LLM tiers.
 It installs and connects two **official** apps, which update themselves:
 
