@@ -83,8 +83,8 @@ $sh = New-Object -ComObject WScript.Shell
 $desk = [Environment]::GetFolderPath("Desktop")
 $lnk = $sh.CreateShortcut("$desk\Free Coder (Hermes).lnk")
 $lnk.TargetPath = "powershell.exe"; $lnk.Arguments = "-NoExit -Command `"& '$HermesExe' desktop`""; $lnk.Save()
-$lnk2 = $sh.CreateShortcut("$desk\Free Coder - add providers.lnk")
-$lnk2.TargetPath = "http://localhost:20128"; $lnk2.Save()
+Remove-Item "$desk\Free Coder - add providers.lnk" -ErrorAction SilentlyContinue
+Set-Content -Path "$desk\Free Coder - add providers.url" -Encoding ascii -Value "[InternetShortcut]`nURL=http://localhost:20128"
 
 Step "Finished"
 Write-Host "1. Open 'Free Coder - add providers' and sign up for the free providers listed in README.md."
