@@ -71,15 +71,19 @@ if(-not (Wait-Omni 600)){ Omni-Diag; Fail "OmniRoute did not start within 10 min
 $sess = Login
 if(-not $sess){
   # password not set yet: set it via OmniRoute's own env file, restart once, log in again
-  Get-Process | Where-Object Name -match "^OmniRoute" | Stop-Process -Force; Start-Sleep 3
+  Write-Host "Could not sign in with the saved password; resetting OmniRoute's login (old data is kept as a backup)."
+  for($i=0; $i -lt 5; $i++){ Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "^OmniRoute" } | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep 2 }
   $env_ = Join-Path $OmniDir "server.env"
   $lines = @(); if(Test-Path $env_){ $lines = Get-Content $env_ | Where-Object { $_ -notmatch "^INITIAL_PASSWORD=" } }
   ($lines + "INITIAL_PASSWORD=$pw") | Set-Content $env_ -Encoding ascii
-  Remove-Item (Join-Path $OmniDir "storage.sqlite*") -Force -ErrorAction SilentlyContinue   # fresh install only: no data to lose yet
+  $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+  foreach($f in Get-ChildItem $OmniDir -Filter "storage.sqlite*" -ErrorAction SilentlyContinue){
+    try { Move-Item $f.FullName "$($f.FullName).bak-$stamp" -Force -ErrorAction Stop } catch { Fail "Could not reset OmniRoute: $($f.Name) is locked. Close OmniRoute (tray or Task Manager), then run install.cmd again." }
+  }
   Start-ScheduledTask -TaskName $task
   if(-not (Wait-Omni 600)){ Omni-Diag; Fail "OmniRoute did not restart within 10 minutes." }
   $sess = Login
-  if(-not $sess){ Fail "Could not sign in to OmniRoute. If you set your own password already, delete $Secret and re-run." }
+  if(-not $sess){ Fail "Could not sign in to OmniRoute even after a reset. Please send install.log and last-error.txt from $env:LOCALAPPDATA\free-coder." }
 }
 
 # 3. API key for Hermes (reuse the one on disk if present)
