@@ -48,10 +48,10 @@ if(Test-Path $OmniExe){ Step "OmniRoute already installed" } else {
   if((Test-Path $dl) -and ((Get-Item $dl).Length -eq $asset.size)){ Write-Host "Installer already downloaded." } else {
     for($i=1; $i -le 3; $i++){ try { Download-File $asset.browser_download_url $dl $asset.size "Downloading OmniRoute"; break } catch { if($i -eq 3){ Fail "Download failed: $($_.Exception.Message)" }; Write-Host "Download interrupted, retrying..."; Start-Sleep 5 } }
   }
-  Step "Installing OmniRoute $($rel.tag_name). This unpacks about 60,000 files and can take 5-15 minutes; antivirus scanning slows it down."
+  Step "Installing OmniRoute $($rel.tag_name). This unpacks about 70,000 files and takes 5-15 minutes (the first 2 minutes show no progress while it prepares); antivirus scanning slows it down."
   $InstDir = Join-Path $env:LOCALAPPDATA "Programs\OmniRoute"
   $p = Start-Process $dl -ArgumentList "/S" -PassThru
-  $expected = 60000; $t0 = Get-Date; $last = $t0
+  $expected = 70000; $t0 = Get-Date; $last = $t0
   while(-not $p.HasExited){
     $n = 0; if(Test-Path $InstDir){ try { $n = ([IO.Directory]::EnumerateFiles($InstDir, "*", [IO.SearchOption]::AllDirectories) | Measure-Object).Count } catch {} }
     $pct = [Math]::Min(99, [int](100 * $n / $expected)); $el = [int]((Get-Date) - $t0).TotalSeconds
