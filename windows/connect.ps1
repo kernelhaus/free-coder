@@ -106,5 +106,13 @@ $envf = "$Hermes\.env"
 $keep = @(); if(Test-Path $envf){ $keep = Get-Content $envf | Where-Object { $_ -notmatch "^(OPENAI_API_KEY|OMNIROUTE_API_KEY)=" } }
 ($keep + "OPENAI_API_KEY=$key" + "OMNIROUTE_API_KEY=$key") | Set-Content $envf -Encoding ascii
 
+# 5. persona: honest, fact-checking assistant (not a yes-man). Keep the original as a backup once.
+$soulSrc = Join-Path $PSScriptRoot "SOUL.md"
+$soulDst = Join-Path $Hermes "SOUL.md"
+if(Test-Path $soulSrc){
+  if((Test-Path $soulDst) -and -not (Select-String -Path $soulDst -SimpleMatch "free-coder persona" -Quiet) -and -not (Test-Path "$soulDst.orig")){ Copy-Item $soulDst "$soulDst.orig" }
+  Copy-Item $soulSrc $soulDst -Force
+}
+
 Write-Host "`nDone. OmniRoute is running and Hermes is connected." -ForegroundColor Green
 Write-Host "Next: add free providers at $Base (see README). Login details: $Secret"

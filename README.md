@@ -28,3 +28,9 @@ OmniRoute silent install, headless start, API key creation, Hermes install, Herm
 ## Files
 - `windows/install.ps1` downloads and installs both, then runs `connect.ps1`
 - `windows/connect.ps1` sets the admin password, creates an API key, points Hermes at OmniRoute, starts OmniRoute at login
+
+## How the agent behaves
+
+`install.cmd` installs a persona file (`windows/SOUL.md`) into Hermes. It tells the agent not to flatter or cave in, to say when you are wrong, to look facts up (web search, documentation, your actual files) instead of guessing, and to warn before anything that changes a physical process. Edit `%LOCALAPPDATA%\hermes\SOUL.md` to change it. Re-running `install.cmd` restores the original, and your previous file is kept as `SOUL.md.orig`. Put changes that must survive in the agent's memory by telling it "remember that ...".
+
+Web search: the `web` toolset is enabled by default. With no API keys, Hermes uses the free tiers of its search providers. These are shared and rate-limited, so for steady use add a free Brave or Exa key (see the Hermes docs, "Web Search").
