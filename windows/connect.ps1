@@ -26,18 +26,47 @@ function Login {
   try { Invoke-WebRequest -UseBasicParsing "$Base/api/auth/login" -Method Post -ContentType "application/json" -Body (@{password=$pw}|ConvertTo-Json) -WebSession $s | Out-Null; $s } catch { $null }
 }
 
+
+function Wait-Omni([int]$maxSec = 600){
+  $t = 0; $nextMsg = 0
+  while($t -lt $maxSec){
+    if(Up){ return $true }
+    $procs = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "^OmniRoute" })
+    if($procs.Count -eq 0 -and $t -ge 20 -and ($t % 60) -eq 20){
+      Write-Host "  OmniRoute is not running; starting it directly..."
+      Start-Process $OmniExe -ArgumentList "--hidden"
+    }
+    if($t -ge $nextMsg){
+      $ports = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $procs.Id -contains $_.OwningProcess } | ForEach-Object { $_.LocalPort } | Sort-Object -Unique) -join ","
+      Write-Host ("  ... {0}s: {1} OmniRoute process(es), listening on [{2}]. First start can take several minutes." -f $t, $procs.Count, $ports)
+      $nextMsg += 15
+    }
+    Write-Progress -Activity "Waiting for OmniRoute to start" -Status "$t s elapsed (up to $([int]($maxSec/60)) min on a first start)" -PercentComplete ([Math]::Min(99, [int](100*$t/$maxSec)))
+    Start-Sleep 3; $t += 3
+  }
+  Write-Progress -Activity "Waiting for OmniRoute to start" -Completed
+  return $false
+}
+function Omni-Diag {
+  $logf = Join-Path $OmniDir "logs\application\app.log"
+  Write-Host "`n--- diagnostics ---"
+  Write-Host ("Processes: " + ((Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "^OmniRoute" } | ForEach-Object { $_.Id }) -join ","))
+  Write-Host ("Port 20128 owner: " + ((Get-NetTCPConnection -LocalPort 20128 -ErrorAction SilentlyContinue | ForEach-Object { "$($_.State):pid$($_.OwningProcess)" }) -join ","))
+  Write-Host ("Task state: " + (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue).State)
+  if(Test-Path $logf){ Write-Host "Last log lines ($logf):"; Get-Content $logf -Tail 8 | ForEach-Object { Write-Host "  $_" } } else { Write-Host "No OmniRoute log yet at $logf" }
+}
+
 # 2. start OmniRoute as the logged-in user and make it start at every login
 $me = (whoami)
 $task = "FreeCoder-OmniRoute"
 Register-ScheduledTask -TaskName $task -Force `
-  -Action (New-ScheduledTaskAction -Execute $OmniExe) `
+  -Action (New-ScheduledTaskAction -Execute $OmniExe -Argument "--hidden") `
   -Trigger (New-ScheduledTaskTrigger -AtLogOn -User $me) `
   -Principal (New-ScheduledTaskPrincipal -UserId $me -LogonType Interactive) | Out-Null
 
 if(-not (Up)){ Start-ScheduledTask -TaskName $task }
 Write-Host "Waiting for OmniRoute to start..."
-$t=0; while(-not (Up) -and $t -lt 180){ Start-Sleep 3; $t+=3 }
-if(-not (Up)){ Fail "OmniRoute did not start within 3 minutes." }
+if(-not (Wait-Omni 600)){ Omni-Diag; Fail "OmniRoute did not start within 10 minutes. The diagnostics above are saved in install.log. Try opening OmniRoute from the Start menu, then run install.cmd again." }
 
 $sess = Login
 if(-not $sess){
@@ -48,7 +77,7 @@ if(-not $sess){
   ($lines + "INITIAL_PASSWORD=$pw") | Set-Content $env_ -Encoding ascii
   Remove-Item (Join-Path $OmniDir "storage.sqlite*") -Force -ErrorAction SilentlyContinue   # fresh install only: no data to lose yet
   Start-ScheduledTask -TaskName $task
-  $t=0; while(-not (Up) -and $t -lt 180){ Start-Sleep 3; $t+=3 }
+  if(-not (Wait-Omni 600)){ Omni-Diag; Fail "OmniRoute did not restart within 10 minutes." }
   $sess = Login
   if(-not $sess){ Fail "Could not sign in to OmniRoute. If you set your own password already, delete $Secret and re-run." }
 }
