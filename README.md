@@ -9,9 +9,8 @@ It installs and connects two **official** apps, which update themselves:
 No Docker, no WSL, no admin rights. About 0.6 GB download.
 
 ## Install
-```
-powershell -ExecutionPolicy Bypass -File windows\install.ps1
-```
+Double-click **`install.cmd`**. It handles PowerShell's "running scripts is disabled on this system" error.
+Manual alternative: `powershell -ExecutionPolicy Bypass -File windows\install.ps1`
 Then follow the two steps it prints. Re-running is safe.
 
 ## One step that cannot be automated: free providers
